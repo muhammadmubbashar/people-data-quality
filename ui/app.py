@@ -101,7 +101,12 @@ with tabs[0]:
             and selected["status"] == "open"
         ):
             with st.form("correction"):
-                value = st.selectbox("Proposed cost centre", ["C100", "C200", "C300"])
+                value = st.selectbox(
+                    "Proposed cost centre",
+                    run_context.get("audit_policy", {}).get(
+                        "cost_centres", ["C100", "C200", "C300"]
+                    ),
+                )
                 reason = st.text_area("Evidence and reason (at least 10 characters)")
                 if st.form_submit_button("Request review"):
                     result = call(

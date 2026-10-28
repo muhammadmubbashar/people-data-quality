@@ -255,3 +255,10 @@ def test_validated_capture_can_start_practice_from_ui(tmp_path, monkeypatch):
         ).click().run()
         assert not app.exception
         assert any("2 findings" in s.value for s in app.success)
+        app.sidebar.selectbox[1].set_value("My work").run()
+        investigate = next(s for s in app.selectbox if s.label == "Investigate")
+        case = next(f for f in investigate.options if "COST_CENTRE_MISMATCH" in f)
+        investigate.select(case).run()
+        assert not app.exception
+        cost_centres = next(s for s in app.selectbox if s.label == "Proposed cost centre")
+        assert set(cost_centres.options) == {"701", "702"}
