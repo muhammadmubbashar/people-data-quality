@@ -20,12 +20,13 @@ Work in small PRs. Completed below means local implementation with tests, not re
 - [ ] CSV adapter: mandatory mappings, key uniqueness, encoding, row/size limits and provenance.
 - [ ] Contract tests against an actual permitted sample export, with no credentials in fixtures.
 - [ ] Excel/Power Query exercise and user teaching walkthrough.
-- [ ] Native report configuration evidence if tenant permissions allow it.
+- [x] Basic native active-worker report created and run; evidence and scope in native-workday-practice.md.
 - [x] Verify OAuth/PKCE and bounded five-worker GET using actual tenant endpoints.
 - [x] Authenticated/minimised preview of saved sample capture, separate from fictional audit data.
 - [x] Strict Staffing/WQL mapping of five sample workers and controlled audit import.
 - [x] Scoped code/manager references, FTE reconciliation and read-only imported HR source.
-- [ ] Native custom-report configuration, full-population policy and recurring API synchronisation.
+- [x] Basic native custom-report configuration (six fields, active workers, display filter).
+- [ ] Full lifecycle/population policy, restricted-role report tests and recurring API synchronisation.
 
 ## Phase 3 — Complete the advertised operational workflow
 
@@ -36,7 +37,7 @@ Work in small PRs. Completed below means local implementation with tests, not re
 - [x] Compare source snapshot dates and reject unknown JSON status/type values.
 - [ ] Real-platform effective-date history, extract timestamps and approved vendor mappings.
 - [x] Reporting filters, captured/current source exports and native report planning notes.
-- [ ] Workday-native report configuration evidence in an authorised tenant.
+- [x] Workday-native report created and verified in an authorised personal tenant.
 - [x] Recurring-issue trends across comparable snapshots with explicit denominators.
 - [x] Simulated release change, failing regression, defect log and successful retest.
 - [x] Versioned user guides, correction checklist, FAQs and reporting ownership.

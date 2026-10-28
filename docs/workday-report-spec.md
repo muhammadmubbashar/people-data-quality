@@ -1,6 +1,11 @@
 # Proposed Workday report specification
 
-Status: design only. Validate the actual tenant's data sources, fields and permissions before use.
+Status: a basic native report was created and run on 29 October 2026. See
+[verified native practice](native-workday-practice.md). `PQ Practice - Active Worker Audit` uses
+Workers for HCM Reporting / All Active Workers with Employee ID, Cost Center - ID, FTE, Manager ID,
+Hire Date and Active Status. It returned 82 sample rows; a display filter showed worker 21038.
+The broader specification below remains proposed: historical prompts, restricted-role validation,
+full lifecycle coverage and web-service exposure have not been implemented or tested.
 
 Purpose: obtain the minimum authorised synthetic worker data needed to investigate data quality.
 Proposed primary object: Worker. Candidate data source: an available worker-reporting source
