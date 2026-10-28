@@ -50,7 +50,27 @@ def run_context(db, run_id):
     return run, context
 
 
-def create_run(store, snapshots, as_of, source_dates=None, cohort="practice"):
+def audit_for_context(snapshots, as_of, context):
+    policy = context.get("audit_policy", {})
+    return audit(
+        snapshots,
+        as_of,
+        context["source_dates"],
+        set(policy["cost_centres"]) if "cost_centres" in policy else None,
+        set(policy.get("manager_reference_ids", [])),
+        policy.get("compare_fte", False),
+    )
+
+
+def create_run(
+    store,
+    snapshots,
+    as_of,
+    source_dates=None,
+    cohort="practice",
+    provenance=None,
+    audit_policy=None,
+):
     dates = dict.fromkeys(SOURCES, as_of.isoformat()) if source_dates is None else source_dates
     if set(dates) != set(SOURCES):
         raise WorkflowError("Supply exactly one date for workday, payroll and core")
@@ -59,7 +79,8 @@ def create_run(store, snapshots, as_of, source_dates=None, cohort="practice"):
             date.fromisoformat(value)
         except ValueError as exc:
             raise WorkflowError("Source dates must be ISO dates") from exc
-    findings = audit(snapshots, as_of, dates)
+    seed_context = {"source_dates": dates, "audit_policy": audit_policy or {}}
+    findings = audit_for_context(snapshots, as_of, seed_context)
     run_id = str(uuid.uuid4())
     context = {
         "source_dates": dates,
@@ -67,7 +88,9 @@ def create_run(store, snapshots, as_of, source_dates=None, cohort="practice"):
         "captured_snapshot": deepcopy(snapshots),
         "capture_kind": "original_import",
         "cohort": cohort,
-        "policy": "v2",
+        "policy": "workday-sample-v1" if provenance else "v2",
+        "audit_policy": audit_policy or {},
+        "provenance": provenance,
     }
     with store.transaction() as db:
         db.execute(
@@ -83,9 +106,9 @@ def create_run(store, snapshots, as_of, source_dates=None, cohort="practice"):
     return {"run_id": run_id, "findings": len(findings), "synthetic_demo": True}
 
 
-def converted_value(field, text, snapshots, worker_id):
+def converted_value(field, text, snapshots, worker_id, context=None):
     if field == "cost_centre":
-        if text not in COST_CENTRES:
+        if text not in (context or {}).get("audit_policy", {}).get("cost_centres", COST_CENTRES):
             raise WorkflowError("Unknown cost centre")
         return text
     if field == "fte":
@@ -128,6 +151,8 @@ def preview_batch(db, items):
         if any(d != run["as_of"] for d in context["source_dates"].values()):
             raise WorkflowError("Obtain comparable source dates before requesting corrections")
         finding = json.loads(row["payload"])
+        if context.get("provenance") and finding["source"] == "workday":
+            raise WorkflowError("Imported Workday source is read-only; investigate with its owner")
         target = (finding["source"], finding["worker_id"], finding["field"])
         if target in seen:
             raise WorkflowError("Duplicate field target in batch")
@@ -142,7 +167,9 @@ def preview_batch(db, items):
         old = matches[0][finding["field"]]
         if str(old) != finding["observed"]:
             raise WorkflowError("Source changed since audit; investigate again", 409)
-        new = converted_value(finding["field"], item.new_value, snapshots, finding["worker_id"])
+        new = converted_value(
+            finding["field"], item.new_value, snapshots, finding["worker_id"], context
+        )
         if old == new:
             raise WorkflowError("Proposed value is unchanged")
         if finding["rule"] == "COST_CENTRE_MISMATCH" and new != finding["expected"]:
@@ -160,8 +187,8 @@ def preview_batch(db, items):
         )
     candidate = deepcopy(snapshots)
     apply_items(candidate, prepared)
-    before = audit(snapshots, date.fromisoformat(run["as_of"]), context["source_dates"])
-    after = audit(candidate, date.fromisoformat(run["as_of"]), context["source_dates"])
+    before = audit_for_context(snapshots, date.fromisoformat(run["as_of"]), context)
+    after = audit_for_context(candidate, date.fromisoformat(run["as_of"]), context)
     validate_outcome(before, after, prepared)
     return {
         "run_id": run_id,
@@ -205,9 +232,9 @@ def apply_batch(store, batch_id, actor):
         run, context = run_context(db, batch["run_id"])
         snapshots = json.loads(run["snapshots"])
         proposal = json.loads(batch["payload"])
-        before = audit(snapshots, date.fromisoformat(run["as_of"]), context["source_dates"])
+        before = audit_for_context(snapshots, date.fromisoformat(run["as_of"]), context)
         apply_items(snapshots, proposal["items"])
-        after = audit(snapshots, date.fromisoformat(run["as_of"]), context["source_dates"])
+        after = audit_for_context(snapshots, date.fromisoformat(run["as_of"]), context)
         validate_outcome(before, after, proposal["items"])
         db.execute("UPDATE runs SET snapshots=? WHERE id=?", (encoded(snapshots), run["id"]))
         for item in proposal["items"]:

@@ -40,7 +40,12 @@ class Finding:
 
 
 def audit(
-    snapshots: dict[str, list[dict]], as_of: date, source_dates: dict[str, str] | None = None
+    snapshots: dict[str, list[dict]],
+    as_of: date,
+    source_dates: dict[str, str] | None = None,
+    allowed_cost_centres: set[str] | None = None,
+    manager_reference_ids: set[str] | None = None,
+    compare_fte: bool = False,
 ) -> list[Finding]:
     """Mock policy: current AU employee extracts, three allowed cost centres.
 
@@ -48,6 +53,7 @@ def audit(
     equal HR status: final pay and paid leave require contextual investigation.
     """
     findings = []
+    centres = COST_CENTRES if allowed_cost_centres is None else allowed_cost_centres
     stale = set()
     if source_dates:
         for source in SOURCES:
@@ -101,7 +107,7 @@ def audit(
                         "high",
                     )
                 )
-            if row["cost_centre"] not in COST_CENTRES:
+            if row["cost_centre"] not in centres:
                 findings.append(
                     Finding(
                         "INVALID_COST_CENTRE",
@@ -109,7 +115,7 @@ def audit(
                         source,
                         "cost_centre",
                         row["cost_centre"],
-                        "C100/C200/C300",
+                        "/".join(sorted(centres)),
                         "Confirm the approved cost centre with HR. Do not guess a replacement.",
                     )
                 )
@@ -148,7 +154,8 @@ def audit(
     hr = indexed["workday"]
     for worker_id, row in hr.items():
         manager = row["manager_id"]
-        if manager and (manager == worker_id or manager not in hr):
+        reference_ids = set(hr) | (manager_reference_ids or set())
+        if manager and (manager == worker_id or manager not in reference_ids):
             findings.append(
                 Finding(
                     "MANAGER_REFERENCE",
@@ -188,7 +195,7 @@ def audit(
                         )
                     )
                 continue
-            if row["cost_centre"] in COST_CENTRES and matching["cost_centre"] in COST_CENTRES:
+            if row["cost_centre"] in centres and matching["cost_centre"] in centres:
                 if row["cost_centre"] != matching["cost_centre"]:
                     findings.append(
                         Finding(
@@ -202,4 +209,21 @@ def audit(
                             "Confirm effective date and owner before correction.",
                         )
                     )
+            if (
+                compare_fte
+                and 0 < row["fte"] <= 1
+                and 0 < matching["fte"] <= 1
+                and row["fte"] != matching["fte"]
+            ):
+                findings.append(
+                    Finding(
+                        "FTE_MISMATCH",
+                        worker_id,
+                        source,
+                        "fte",
+                        str(matching["fte"]),
+                        str(row["fte"]),
+                        "The scoped practice copy differs from the captured HR FTE ratio.",
+                    )
+                )
     return findings

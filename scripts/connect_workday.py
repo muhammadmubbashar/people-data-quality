@@ -12,11 +12,18 @@ from urllib.parse import parse_qs, urlsplit
 import requests
 
 from people_quality.workday import ConnectionError, Handshake, Tenant, read_workers
+from people_quality.workday_enrichment import discover
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=Path("data/local/workday-config.json"))
+    parser.add_argument(
+        "--discover", action="store_true", help="Inspect documented audit field sources"
+    )
+    parser.add_argument(
+        "--enrich", action="store_true", help="Use previously discovered field metadata"
+    )
     args = parser.parse_args()
     tenant = Tenant(**json.loads(args.config.read_text(encoding="utf-8")))
     handshake = Handshake(tenant)
@@ -43,6 +50,18 @@ def main():
                 with requests.Session() as session:
                     token = handshake.exchange(code, state, session)
                     workers = read_workers(tenant, token, session)
+                    if args.discover or args.enrich:
+                        metadata = None
+                        if args.enrich:
+                            metadata = json.loads(
+                                Path("data/local/workday-discovery.json").read_text(
+                                    encoding="utf-8"
+                                )
+                            )
+                        discovery = discover(tenant, workers, token, session, metadata)
+                        Path("data/local/workday-discovery.json").write_text(
+                            json.dumps(discovery, indent=2) + "\n", encoding="utf-8"
+                        )
                     del token
                 evidence = {
                     "checked_at": datetime.now(UTC).isoformat(),

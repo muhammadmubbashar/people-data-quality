@@ -1,70 +1,46 @@
-# Personal Workday connection: staged setup
+# Verified Workday sample mapping — v0.3
 
-The account owner completed first login to a personal development tenant. Native HR Operations,
-API client reporting and tenant-specific REST/token/authorization endpoints were inspected.
-No Flight Centre tenant or records are involved. Tenant details stay in ignored local configuration.
+Verified 29 October 2026: OAuth/PKCE authenticated to a personal development tenant. Staffing and WQL returned employee, cost-centre, FTE, manager and employment information for five sample workers. No Flight Centre systems are involved.
 
-## Verified read-only connection — 29 October 2026
+## Connection and scope
 
-The one-shot probe uses OAuth Authorization Code with PKCE and state verification. The native
-registration form rejects plain HTTP redirects, so the callback uses HTTPS on 127.0.0.1:8766.
-The application makes a bounded GET of at most five sample workers after token exchange.
-Tokens are held in memory, refresh tokens are discarded and HTTP redirects are not followed.
-It cannot update Workday records. The local response remains under data/local, outside Git.
+The account owner approved Staffing, then separately approved System for WQL. These functional scopes are broader than read-only roles. The connector uses GET for data/metadata and POST only for OAuth token exchange. Workday still enforces the account's data security. Tokens stay in memory, refresh tokens are discarded, and no employee records are written.
 
-The account owner approved client creation and local certificate trust. The registered client is
-People Quality Local Practice, with the Staffing functional scope, PKCE, Bearer tokens and the
-fixed HTTPS callback. Administrative consent, all-system-user access and non-expiring refresh
-tokens remain off. A functional scope is not a read-only security role: the app's GET-only code
-limits its behaviour, while actual Workday permissions follow the authenticating user's security.
-Future least-privilege service-account setup is a separate task.
+A seven-day local HTTPS certificate was trusted in CurrentUser after explicit approval. The callback binds to 127.0.0.1:8766, validates random state and PKCE, rejects repeat callbacks and suppresses access logs. Workday TLS verification remains enabled. Omitting the optional redirect_uri from authorization and token requests resolved HTTP 403 in this tenant, using its registered callback; this observation does not identify an internal gateway rule.
 
-To enable HTTPS without bypassing browser warnings, a seven-day development certificate with
-localhost and 127.0.0.1 SANs was prepared and trusted in the current user's store after explicit
-confirmation. No Workday TLS checks are disabled. Remove that exact certificate after the exercise or when it expires.
-Its private key is ignored by Git; do not share the data/local directory.
+## Verified fields
 
-The first authorization request was blocked by Workday's gateway when it included the optional
-redirect_uri parameter. Omitting that documented optional parameter reached the normal Workday
-sign-in page, using the fixed URI already registered on the client. No protection was disabled.
-The token request initially also contained the optional redirect_uri field and returned HTTP 403.
-Omitting it from both requests succeeded using the registered callback: OAuth authenticated and
-GET /workers returned five sample rows. This is an observed resolution, not proof of the gateway's
-internal rule. Requests keep certificate verification enabled.
+- Staffing resolves workerId (employee number), internal WID, worker type and service-date hireDate.
+- WQL allWorkers returns employeeID, worker, costCenter, costCenter_ID, FTE, FTEPct, managerID, manager_EffectiveDated, hireDate, activeStatus, terminated, onLeave, terminationDate and workerType.
+- The case-sensitive aliases were discovered from tenant metadata. Each manager WID is separately resolved through Staffing and its employee number compared with managerID.
+- FTE is a ratio and FTEPct a percentage. Values must agree: 1.0 equals 100%. Cost-centre code comes from costCenter_ID, never from parsing a display name.
+- Employee numbers remain text, preserving leading zeroes. WIDs remain separate evidence.
+- Missing fields, duplicate/unexpected IDs, unknown statuses, wrong joins, ambiguous managers and incompatible units quarantine the capture. Defaults such as C100, E0001 or 1.0 are never substituted.
 
-The returned fields were id, descriptor, href, primaryWorkEmail, primarySupervisoryOrganization,
-isManager and businessTitle. The UI only exposes sample ID/name/title/supervisory group, not emails
-or tenant URLs. A supervisory organisation is not a cost centre. Cost centre, FTE, manager ID,
-worker type, status and hire date were not supplied by this response. No audit-model import occurred.
-The local API capture is evidence of one successful read, not a persistent authenticated session.
+The verified sample contains active employees. An omitted terminationDate is mapped to blank only with explicit terminated=false. Complex/inactive states and future termination events are blocked until their semantics are agreed. The query reads current tenant state, not a historical as-of report or a transactionally frozen cross-endpoint snapshot.
 
-## Connection sequence
+## Refresh and import
 
-1. Prepare the local HTTPS certificate with scripts/prepare_workday_tls.ps1.
-2. Review and confirm the API client and local certificate trust actions.
-3. Register the client and record only its public ID and verified endpoints in
-   data/local/workday-config.json (matching the Tenant model).
-4. Start scripts/connect_workday.py. It listens on loopback for ten minutes, with access logging off.
-5. Open its locally saved authorization URL and review Workday's consent screen before authorizing.
-6. Inspect the probe result and actual field contract; do not invent missing HR fields.
-7. Implement and test field mapping before importing records into the three-source audit model.
+1. Store verified endpoints/public client ID in ignored data/local/workday-config.json.
+2. Run scripts/connect_workday.py --discover to discover metadata and collect the sample.
+3. Use --enrich for later reads using the observed local field metadata.
+4. Open logs/workday-authorize-url.txt while the ten-minute listener runs and complete private sign-in/consent when required.
+5. Open Workday sample data in the UI. All five staged rows must pass before import.
+6. Choose a clean audit or a controlled training audit. Review source evidence and scoped policy before corrections.
 
-The verified worker-list response did not include cost centre, FTE, manager or effective dates.
-A successful GET proves authentication and a worker read, not full HR reconciliation coverage.
-Do not fill missing fields using the old fictional C100/E0001 defaults.
+GET /workday/capture shows the original minimal API capture. GET /workday/staging validates enriched records. Analyst-only POST /workday/audits creates a run. Every endpoint uses the existing demo-role authentication. The process saves evidence locally and exits; there is no continuous sync or write-back.
 
-Sources: Workday's official Create Your API Client, PKCE Authentication and WCP Development Tenants
-documentation, plus the signed-in tenant's native registration form and API client report.
+## Audit boundaries
 
+HR is the Workday sample snapshot. Payroll and Core are explicitly labelled local copies. Training mode injects two logged errors only into those copies. Imported HR is read-only through single/bulk correction flows. Per-run policies preserve legacy C100/C200/C300 exercises. Native sample FTE values are reconciled against HR as well as range-checked, rejecting plausible but wrong corrections.
 
-## See it in the demo
+Cost-centre validation is limited to assignments resolved in this capture, not the full active finance master. Manager IDs were resolved through Staffing, but those managers are outside the five-row audit population. Full-population policy, payroll periods, effective-date history, production identity and actual downstream connectors remain future work.
 
-Open Workspace > Workday sample data. It shows the last captured sample and the Brisbane capture
-time. The one-shot OAuth process exits after the read and discards the access token. No refresh
-token is stored. To fetch a new capture, repeat steps 4–6; an existing Workday login may avoid
-another password prompt. Local configuration and captures are intentionally absent from GitHub,
-so a fresh checkout shows “No verified capture” until its owner connects their own tenant.
+Automated tests use fabricated responses; CI does not contact Workday. Actual tenant reads are separate manual integration checks. Tenant config, raw captures, certificates and keys are excluded from GitHub. A fresh checkout requires its own authorised tenant and capture.
 
-Automated tests use fabricated responses and no network credentials. They verify state/PKCE,
-one-use callbacks, request boundaries, safe error messages and authenticated/minimised preview.
-The actual five-row API read was a separate local manual integration check.
+Official sources:
+
+- [REST fundamentals](https://developer.workday.com/documentation/GUID-85810465-bcfb-4fdf-a26d-55eaff3968a8-enHYPHENus)
+- [Staffing API](https://developer.workday.com/rest-api-explorer/docs/staffing/v7)
+- [WQL and System scope](https://developer.workday.com/documentation/GUID-6546152a-bcf0-447d-8d64-230f9e2ac291-enHYPHENus)
+- [WQL metadata](https://developer.workday.com/documentation/GUID-5c940864-7651-4e28-a9d2-79b45292e66a-enHYPHENus)

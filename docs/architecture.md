@@ -21,12 +21,13 @@ flowchart LR
     WD[Personal Workday development tenant] -->|OAuth PKCE and bounded GET| PROBE[One-shot local HTTPS probe]
     PROBE --> CAPTURE[Ignored local sample capture]
     CAPTURE -->|Authenticated preview endpoint| API
-    CAPTURE -. complete field mapping still planned .-> RULES
+    CAPTURE --> STAGE[Strict Staffing and WQL mapping]
+    STAGE -->|Validated source plus labelled downstream practice copies| RULES
 ```
 
 Solid edges are implemented. A five-worker personal-tenant API read was verified locally.
-The dashed step is future complete field mapping into the audit model. Tokens are not persisted,
-and the UI shows a saved capture, not a live session. No Flight Centre systems are connected.
+Staffing/WQL mapping and audit import are implemented for a five-worker sample. Tokens are not
+persisted, and the UI shows a saved capture, not a live session. No Flight Centre systems are connected.
 
 ## Data flow
 
@@ -76,3 +77,15 @@ These are local teaching controls, not Workday business processes or production 
 
 Schema version 2 adds run_context, case_work, batches, lab_events, documents and test_runs.
 The startup migration preserves old runs and changes. Back up the database before upgrading.
+
+
+## Workday sample audit policy
+
+Imported runs carry their capture hash/time, field map, employee-to-internal-ID mapping and scoped
+reference policy in run_context. Their HR snapshot is read-only through single/bulk corrections.
+Payroll/Core are explicit local copies. The optional training mode injects two logged errors only
+into those copies. Cost-centre reference validation is limited to assignments resolved in the
+capture, not the full active finance master. Managers outside the sample are checked against
+separately resolved Staffing IDs. Native sample runs compare FTE ratios against the captured HR
+source as well as checking range, so a wrong but numerically plausible correction cannot pass.
+Legacy runs retain their original C100/C200/C300 policy and findings.
