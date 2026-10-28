@@ -3,6 +3,7 @@
 from collections import Counter
 from dataclasses import dataclass
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -13,8 +14,8 @@ SOURCES = ("workday", "payroll", "core")
 class Worker(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     worker_id: str = Field(min_length=1, max_length=30)
-    worker_type: str = "Employee"
-    status: str = "Active"
+    worker_type: Literal["Employee", "Contingent"] = "Employee"
+    status: Literal["Active", "Leave", "Terminated", "PreHire"] = "Active"
     cost_centre: str = "C100"
     manager_id: str = "E0001"
     fte: float = 1.0
@@ -38,13 +39,33 @@ class Finding:
         return self.rule, self.worker_id, self.source, self.field
 
 
-def audit(snapshots: dict[str, list[dict]], as_of: date) -> list[Finding]:
+def audit(
+    snapshots: dict[str, list[dict]], as_of: date, source_dates: dict[str, str] | None = None
+) -> list[Finding]:
     """Mock policy: current AU employee extracts, three allowed cost centres.
 
     Duplicate keys are quarantined from joins. Payroll status is not assumed to
     equal HR status: final pay and paid leave require contextual investigation.
     """
     findings = []
+    stale = set()
+    if source_dates:
+        for source in SOURCES:
+            if source_dates[source] != as_of.isoformat():
+                stale.add(source)
+                findings.append(
+                    Finding(
+                        "SNAPSHOT_DATE",
+                        "ALL",
+                        source,
+                        "source_date",
+                        source_dates[source],
+                        as_of.isoformat(),
+                        "This source represents a different date. Get a comparable extract before "
+                        "cross-system corrections.",
+                        "high",
+                    )
+                )
     indexed = {}
     for source in SOURCES:
         rows = snapshots[source]
@@ -146,6 +167,8 @@ def audit(snapshots: dict[str, list[dict]], as_of: date) -> list[Finding]:
         if not current or row["worker_type"] != "Employee" or row["status"] != "Active":
             continue
         for source in ("payroll", "core"):
+            if source in stale or "workday" in stale:
+                continue
             matching = indexed[source].get(worker_id)
             if matching is None:
                 # Duplicate rows already have their own finding; don't call them missing.

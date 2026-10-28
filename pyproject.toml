@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "people-data-quality"
-version = "0.1.0"
+version = "0.2.0"
 description = "Synthetic HR data reconciliation and controlled correction demonstration"
 requires-python = ">=3.12,<3.14"
 dependencies = [

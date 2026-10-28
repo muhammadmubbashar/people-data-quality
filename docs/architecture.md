@@ -11,7 +11,12 @@ flowchart LR
     API --> STORE[SQLite repository and transactions]
     STORE --> RUNS[Run snapshots and findings]
     STORE --> CHANGES[Requests, approvals and events]
-    API --> CSV[Audit CSV export]
+    STORE --> CASES[Case ownership and investigation evidence]
+    STORE --> BATCHES[Atomic batch proposals and approval history]
+    STORE --> DOCS[Versioned guides, requirements and coaching]
+    STORE --> TESTS[Release results and defects]
+    API --> CSV[Filtered reports and three-source CSV download]
+    API --> REGRESSION[Executable fictional release scenarios]
     RULES --> API
     API -. planned authorised export or API .-> WD[Personal Workday development tenant]
 ```
@@ -47,3 +52,23 @@ The local role selector has access to all three demo keys. It proves server-side
 not independent human approval. Audit events are ordinary database rows, not immutable records.
 All users can read all synthetic runs. Production needs individual SSO identities, scoped access
 and independently protected audit storage before handling employee data.
+
+## Expanded workflow and storage
+
+A run stores both the original capture and a working copy. Corrections change the working copy;
+original captures remain available for explaining what was first observed. Legacy runs are labelled
+migration_current_state because their true original source rows cannot be reconstructed.
+Source dates are compared before cross-system reconciliation: mismatched captures create a timing
+finding and prevent corrections until a new aligned capture is supplied.
+
+The case workspace records a responsible team, priority, evidence, uncertainty, next action and
+follow-up date. An optimistic version check prevents overwriting another saved investigation.
+Batches apply all reviewed rows in one database transaction, or save none of them. A stale row
+invalidates the proposal. Rejection and cancellation preserve the decision history.
+
+Documents retain successive versions. A simulated requirement needs reviewer acceptance. A defect
+is linked to a failed executable scenario; resolution requires matching passing retest evidence.
+These are local teaching controls, not Workday business processes or production audit guarantees.
+
+Schema version 2 adds run_context, case_work, batches, lab_events, documents and test_runs.
+The startup migration preserves old runs and changes. Back up the database before upgrading.

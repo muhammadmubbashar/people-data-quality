@@ -6,6 +6,8 @@ import requests
 import streamlit as st
 from dotenv import load_dotenv
 
+from ui.lab_views import case_workspace, render_workspace
+
 load_dotenv()
 st.set_page_config(page_title="People Data Quality", layout="wide")
 st.title("People Data Quality and Payroll Readiness")
@@ -29,6 +31,22 @@ def call(method, path, **kwargs):
         st.error("API unavailable. Start scripts/run-api.ps1 in another terminal.")
         st.stop()
 
+
+workspace = st.sidebar.selectbox(
+    "Workspace",
+    [
+        "My work",
+        "Bulk corrections",
+        "Reports and trends",
+        "Release testing",
+        "Guides and coaching",
+        "Requirements workshop",
+        "Practice setup",
+    ],
+)
+if workspace != "My work":
+    render_workspace(workspace, call, role)
+    st.stop()
 
 if role == "analyst" and st.button("Create synthetic audit run"):
     st.session_state["run"] = call("POST", "/runs/demo").json()["run_id"]
@@ -85,6 +103,7 @@ with tabs[0]:
                         json={"finding_id": selected["id"], "new_value": value, "reason": reason},
                     ).json()
                     st.success(f"Requested: {result['change_id']}")
+        case_workspace(call, selected, role)
 with tabs[1]:
     changes = call("GET", "/changes").json()
     st.dataframe(changes, width="stretch")
@@ -101,6 +120,12 @@ with tabs[1]:
         ):
             call("POST", f"/changes/{change['id']}/apply")
             st.rerun()
+        if change["status"] == "pending" and role in ("analyst", "reviewer"):
+            note = st.text_input("Reason to cancel or reject")
+            action = "reject" if role == "reviewer" else "cancel"
+            if st.button(f"{action.title()} request"):
+                call("POST", f"/lab/changes/{change['id']}/{action}", json={"reason": note})
+                st.rerun()
 with tabs[2]:
     st.write("Case counts and affected-worker counts have different denominators.")
     st.metric("Distinct affected workers", len({f["worker_id"] for f in open_items}))
@@ -119,7 +144,7 @@ with tabs[3]:
         "may represent final pay and requires context, not an automatic correction."
     )
     st.write(
-        "Phase 1 supports cost-centre corrections. Batch previews are available via API docs. "
-        "Other corrections, rejection/escalation, trend history and native Workday tasks "
-        "are tracked in the roadmap."
+        "Use the workspace menu for investigation notes, full bulk workflows, reports and trends, "
+        "release testing, user guides, coaching and requirements. Native Workday tasks still "
+        "require authorised platform access."
     )

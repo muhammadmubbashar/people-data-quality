@@ -8,7 +8,7 @@ Work in small PRs. Completed below means local implementation with tests, not re
 - [x] Source-record comparison and documented policy.
 - [x] Cost-centre correction request, separate review and application.
 - [x] Stale-value protection, revalidation and repeat-application protection.
-- [x] Bulk preview API with no writes; batch execution deferred.
+- [x] Bulk preview API with no writes; complete execution added in v0.2.
 - [x] CSV report and basic help.
 - [x] Domain/API regression tests, locked dependencies and CI definition.
 - [x] Architecture and production gap documentation.
@@ -26,14 +26,16 @@ Work in small PRs. Completed below means local implementation with tests, not re
 ## Phase 3 — Complete the advertised operational workflow
 
 - [ ] User coaching: record an actual peer walkthrough, feedback and guide revision.
-- [ ] Root-cause investigation notes, case ownership and escalation.
-- [ ] Correction rejection, cancellation and additional approved field types.
-- [ ] Whole-batch approval/execution with atomic validation and rollback evidence.
-- [ ] Align source effective dates, capture per-source timestamps and approved status mappings.
-- [ ] Reporting prompts and Workday-native report specification/configuration evidence.
-- [ ] Recurring-issue trends across comparable snapshots with explicit denominators.
-- [ ] Simulated release change, failing regression, defect log and successful retest.
-- [ ] Versioned user guides, correction checklist, FAQs and reporting ownership.
+- [x] Root-cause investigation notes, case ownership and escalation.
+- [x] Correction rejection, cancellation and additional approved field types.
+- [x] Whole-batch approval/execution with atomic validation and rollback evidence.
+- [x] Compare source snapshot dates and reject unknown JSON status/type values.
+- [ ] Real-platform effective-date history, extract timestamps and approved vendor mappings.
+- [x] Reporting filters, captured/current source exports and native report planning notes.
+- [ ] Workday-native report configuration evidence in an authorised tenant.
+- [x] Recurring-issue trends across comparable snapshots with explicit denominators.
+- [x] Simulated release change, failing regression, defect log and successful retest.
+- [x] Versioned user guides, correction checklist, FAQs and reporting ownership.
 - [ ] Requirements workshop with an actual willing participant; record decisions and uncertainties.
 
 ## Phase 4 — Production engineering proof
@@ -49,3 +51,11 @@ Work in small PRs. Completed below means local implementation with tests, not re
 Write the business problem and acceptance criteria first. Add a failing meaningful test, implement,
 run checks, update the guide, capture actual evidence and review the PR. Mock and real-platform
 tests have separate labels. No performance or business-impact claims without measurements.
+
+
+## v0.2 evidence boundaries
+
+Coaching and requirements workflows are implemented; actual participation is still a separate task.
+Three-source CSV export supports an Excel exercise; it does not prove Excel skill or import arbitrary
+Workday exports. Simulated releases test this application's rules, not a real Workday tenant.
+All production engineering and real platform integration remain explicitly future work.

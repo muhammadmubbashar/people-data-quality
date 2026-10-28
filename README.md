@@ -12,6 +12,9 @@ The local app demonstrates the workflow while that access is being established.
 
 ## Start here
 
+- [Expanded practice lessons: start here](docs/practice-lessons.md)
+- [Advert coverage and honest boundaries](docs/advert-coverage.md)
+- [Public website review](docs/public-site-review.md)
 - [Your first lesson and demo](docs/step-by-step.md)
 - [Architecture and diagram](docs/architecture.md)
 - [Real Workday access and integration plan](docs/workday-lab.md)
@@ -19,7 +22,7 @@ The local app demonstrates the workflow while that access is being established.
 - [Production and scalability plan](docs/production.md)
 - [User guide](docs/user-guide.md)
 
-## What runs today
+## What runs today — v0.2 analyst practice lab
 
 - FastAPI service with authenticated demo-role checks and documented REST endpoints.
 - Streamlit interface for audit review, source comparison, correction requests, approvals and CSV reports.
@@ -27,7 +30,11 @@ The local app demonstrates the workflow while that access is being established.
 - Synthetic 100-worker example with seven expected exceptions and valid exclusion cases.
 - Database-backed request/review/apply history; three distinct simulated identities.
 - Cost-centre correction with approval, stale-value detection, transactional revalidation and repeat protection.
-- Bulk dry-run endpoint. Batch execution is not implemented.
+- Whole-batch preview, review, atomic application and rollback on stale or invalid records.
+- Investigation notes, case ownership, escalation, rejection and cancellation.
+- Dated source captures, filtered reports, comparable trend exercises and Excel source downloads.
+- Simulated release testing, defects, passing retests and reviewer verification.
+- Versioned guides, coaching practice and requirements decisions with evidence labels.
 - Automated domain/API tests, dependency hash locks, lint and format checks, container configuration and CI.
 
 ## Windows setup
