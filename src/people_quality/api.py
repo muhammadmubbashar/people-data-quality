@@ -17,13 +17,14 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from people_quality.demo import sample_snapshots
-from people_quality.domain import COST_CENTRES, Worker, audit
+from people_quality.domain import COST_CENTRES, Worker
 from people_quality.lab_api import register_lab
+from people_quality.operations import audit_for_context, run_context
 from people_quality.operations import create_run as create_practice_run
-from people_quality.operations import run_context
 from people_quality.store import Store, encoded
 from people_quality.workday import ConnectionError as WorkdayConnectionError
 from people_quality.workday import capture_summary
+from people_quality.workday_mapping import import_stage, read_stage
 
 
 @dataclass(frozen=True)
@@ -72,7 +73,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     if len(set(settings.keys.values())) != 3 or any(len(k) < 24 for k in settings.keys.values()):
         raise RuntimeError("Run scripts/setup.ps1: distinct random demo keys are required")
     store = Store(settings.db_path)
-    app = FastAPI(title="People Data Quality — independent synthetic demo", version="0.2.1")
+    app = FastAPI(title="People Data Quality — independent synthetic demo", version="0.3.0")
 
     def actor(x_api_key: Annotated[str | None, Header()] = None) -> str:
         for role, key in settings.keys.items():
@@ -101,6 +102,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(404, "Finding not found")
         payload = json.loads(row["payload"])
         _, context = run_context(db, row["run_id"])
+        if context.get("provenance") and payload["source"] == "workday":
+            raise HTTPException(422, "Imported Workday source is read-only")
         run = get_run(db, row["run_id"])
         if any(d != run["as_of"] for d in context["source_dates"].values()):
             raise HTTPException(422, "Obtain comparable source dates before corrections")
@@ -108,8 +111,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(409, "Finding is already resolved")
         if payload["field"] != "cost_centre":
             raise HTTPException(422, "Phase 1 supports cost-centre corrections only")
-        if request.new_value not in COST_CENTRES:
-            raise HTTPException(422, "Cost centre must be C100, C200 or C300")
+        if request.new_value not in context.get("audit_policy", {}).get(
+            "cost_centres", COST_CENTRES
+        ):
+            raise HTTPException(422, "Cost centre must be in this run's verified reference set")
         if request.new_value == payload["observed"]:
             raise HTTPException(422, "Proposed value must differ from the observed value")
         if payload["rule"] == "COST_CENTRE_MISMATCH" and request.new_value != payload["expected"]:
@@ -118,7 +123,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/health")
     def health():
-        return {"status": "ok", "mode": "synthetic-demo", "version": "0.2.1"}
+        return {"status": "ok", "mode": "synthetic-demo", "version": "0.3.0"}
 
     @app.post("/runs/demo")
     def demo_run(role: Actor):
@@ -266,9 +271,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             ]
             if len(targets) != 1 or targets[0][payload["field"]] != change["old_value"]:
                 raise HTTPException(409, "Source changed since request; investigate again")
-            before = {f.signature for f in audit(snapshots, date.fromisoformat(run["as_of"]))}
+            _, context = run_context(db, run["id"])
+            if context.get("provenance") and payload["source"] == "workday":
+                raise HTTPException(422, "Imported Workday source is read-only")
+            before = {
+                f.signature
+                for f in audit_for_context(snapshots, date.fromisoformat(run["as_of"]), context)
+            }
             targets[0][payload["field"]] = change["proposed"]
-            remaining = audit(snapshots, date.fromisoformat(run["as_of"]))
+            remaining = audit_for_context(snapshots, date.fromisoformat(run["as_of"]), context)
             signatures = {f.signature for f in remaining}
             target_signature = (
                 payload["rule"],
@@ -327,6 +338,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(
                 422, "Workday capture unavailable or invalid; inspect local evidence"
             ) from None
+
+    @app.get("/workday/staging", tags=["Personal Workday lab"])
+    def workday_staging(role: Actor):
+        return read_stage(Path(settings.db_path).parent)
+
+    @app.post("/workday/audits", tags=["Personal Workday lab"])
+    def workday_audit(role: Actor, training_errors: bool = False):
+        allowed(role, "analyst")
+        return import_stage(store, read_stage(Path(settings.db_path).parent), training_errors)
 
     register_lab(app, store, actor)
     return app

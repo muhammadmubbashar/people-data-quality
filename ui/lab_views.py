@@ -456,6 +456,68 @@ def workday_preview(call, role):
         ZoneInfo("Australia/Brisbane")
     )
     st.caption(f"Captured {checked:%d %b %Y, %H:%M} Brisbane time. Not a live session.")
+    stage = call("GET", "/workday/staging").json()
+    if stage["status"] != "not_captured":
+        st.subheader("Validated employment details")
+        st.write("The directory entry has been joined to Staffing and WQL records by verified IDs.")
+        if stage["errors"]:
+            st.error("Import blocked. Resolve these source or mapping problems first.")
+            st.dataframe(stage["errors"], hide_index=True, width="stretch")
+        if stage["rows"]:
+            st.dataframe(
+                stage["rows"],
+                column_order=[
+                    "worker_id",
+                    "sample_worker",
+                    "cost_centre",
+                    "fte",
+                    "manager_id",
+                    "status",
+                    "hire_date",
+                    "worker_type",
+                    "cost_centre_name",
+                    "manager_name",
+                    "fte_percent",
+                    "workday_id",
+                ],
+                hide_index=True,
+                width="stretch",
+            )
+        st.info(
+            "FTE 1.0 means 100% of a full-time schedule. The employee number is the join key; "
+            "the longer Workday internal ID is retained as source evidence."
+        )
+        if stage["ready"] and role == "analyst":
+            st.write(
+                "Choose a clean baseline or a controlled practice exercise. Workday is read-only."
+            )
+            for training, label in [
+                (False, "Create clean audit from Workday capture"),
+                (True, "Create practice audit with two downstream errors"),
+            ]:
+                if st.button(label):
+                    result = call(
+                        "POST", "/workday/audits", params={"training_errors": training}
+                    ).json()
+                    st.session_state["workday_audit_created"] = result
+            if "workday_audit_created" in st.session_state:
+                result = st.session_state["workday_audit_created"]
+                st.success(f"Audit {result['run_id']} created with {result['findings']} findings.")
+                st.write(
+                    "Open My work and select this audit ID. "
+                    "Corrections affect only local practice copies."
+                )
+        st.warning(
+            "Workday supplies the HR snapshot. Payroll and Core are labelled simulated copies. "
+            "Training errors are deliberately inserted into those copies; "
+            "they are not Workday defects."
+        )
+        with st.expander("Field sources, validation and coverage"):
+            st.json(stage["field_map"])
+            for limitation in stage["coverage"]:
+                st.write(limitation)
+            st.code(stage["source_sha256"], language=None)
+        return
     st.dataframe(capture["workers"], hide_index=True, width="stretch")
     st.warning(
         "A supervisory organisation describes a reporting group; it is not a cost centre. "

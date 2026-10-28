@@ -9,10 +9,12 @@ Built to practise the work described in a People Systems Data Analyst vacancy.
 **No affiliation with Flight Centre or Workday. No employer data.** A read-only OAuth/PKCE
 connection to a personal Workday development tenant was verified on 29 October 2026 by fetching
 five sample workers. The Workday workspace displays that saved capture; it is not a continuous
-live session. The fictional audit data remains separate until complete field mappings are verified.
+live session. Validated Staffing/WQL employment snapshots can now enter the audit workflow alongside explicitly
+labelled payroll/Core practice copies. Workday source records remain read-only.
 
 ## Start here
 
+- [Workday-to-audit lesson with real platform sample data](docs/workday-audit-lesson.md)
 - [Expanded practice lessons: start here](docs/practice-lessons.md)
 - [Advert coverage and honest boundaries](docs/advert-coverage.md)
 - [Public website review](docs/public-site-review.md)
@@ -24,7 +26,7 @@ live session. The fictional audit data remains separate until complete field map
 - [Production and scalability plan](docs/production.md)
 - [User guide](docs/user-guide.md)
 
-## What runs today — v0.2.1 analyst practice lab
+## What runs today — v0.3.0 analyst practice lab
 
 - FastAPI service with authenticated demo-role checks and documented REST endpoints.
 - Streamlit interface for audit review, source comparison, correction requests, approvals and CSV reports.
@@ -38,6 +40,8 @@ live session. The fictional audit data remains separate until complete field map
 - Simulated release testing, defects, passing retests and reviewer verification.
 - Versioned guides, coaching practice and requirements decisions with evidence labels.
 - Authenticated personal Workday sample preview, bounded GET, PKCE/state checks and no stored tokens.
+- Verified employee/cost-centre/manager IDs, FTE units, employment flags and hire dates from Staffing/WQL.
+- Fail-closed staging and native sample import, source lineage, scoped audit references and read-only HR.
 - Automated domain/API tests, dependency hash locks, lint and format checks, container configuration and CI.
 
 ## Windows setup

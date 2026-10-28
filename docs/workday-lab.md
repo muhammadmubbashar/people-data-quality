@@ -7,7 +7,9 @@ the account owner completed first login. Native HR Operations screens, sample en
 and API endpoint information are accessible. A dedicated Staffing OAuth/PKCE client was created
 and the local HTTPS certificate trusted after explicit approval. OAuth/PKCE authentication and
 a bounded read of five sample workers succeeded. A saved sample preview is available in the UI.
-The access token was discarded; a continuous sync and full audit mapping are not implemented.
+The access token was discarded. Staffing/WQL now supplies a validated five-worker snapshot to
+the local audit system; a continuous sync, full population coverage and live downstream systems
+are not implemented. System scope for WQL was separately approved by the account owner.
 See [connection setup and boundaries](workday-connection.md). Personal account details, tenant
 identifiers, certificates and configuration remain local and are not committed.
 

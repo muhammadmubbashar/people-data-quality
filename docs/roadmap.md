@@ -23,7 +23,9 @@ Work in small PRs. Completed below means local implementation with tests, not re
 - [ ] Native report configuration evidence if tenant permissions allow it.
 - [x] Verify OAuth/PKCE and bounded five-worker GET using actual tenant endpoints.
 - [x] Authenticated/minimised preview of saved sample capture, separate from fictional audit data.
-- [ ] Complete audit field mapping, native reports and recurring API synchronisation.
+- [x] Strict Staffing/WQL mapping of five sample workers and controlled audit import.
+- [x] Scoped code/manager references, FTE reconciliation and read-only imported HR source.
+- [ ] Native custom-report configuration, full-population policy and recurring API synchronisation.
 
 ## Phase 3 — Complete the advertised operational workflow
 

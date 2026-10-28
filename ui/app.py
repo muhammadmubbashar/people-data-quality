@@ -56,6 +56,14 @@ if not runs:
     st.stop()
 run_ids = [r["id"] for r in runs]
 run_id = st.selectbox("Audit run", run_ids)
+run_context = call("GET", f"/lab/context/{run_id}").json()
+if run_context.get("provenance"):
+    st.info(
+        "HR records came from a personal Workday sample capture and are read-only. "
+        "Payroll and Core are simulated practice copies. Local approvals do not update Workday."
+    )
+    with st.expander("Source evidence and deliberately injected practice errors"):
+        st.json(run_context["provenance"])
 tabs = st.tabs(["Audit queue", "Corrections and approvals", "Reports", "Help"])
 findings = call("GET", f"/runs/{run_id}/findings").json()
 with tabs[0]:
