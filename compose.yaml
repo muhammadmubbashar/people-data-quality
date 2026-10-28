@@ -1,0 +1,33 @@
+services:
+  api:
+    build: .
+    env_file: .env
+    environment:
+      DB_PATH: /app/data/local/people-quality.db
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - demo-data:/app/data/local
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+  ui:
+    build: .
+    env_file: .env
+    environment:
+      API_URL: http://api:8000
+    command: ["streamlit", "run", "ui/app.py", "--server.address", "0.0.0.0", "--server.port", "8501", "--server.headless", "true"]
+    ports:
+      - "127.0.0.1:8501:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8501/_stcore/health', timeout=3)"]
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+volumes:
+  demo-data:
