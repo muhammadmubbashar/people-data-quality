@@ -44,7 +44,12 @@ findings = call("GET", f"/runs/{run_id}/findings").json()
 with tabs[0]:
     open_items = [f for f in findings if f["status"] == "open"]
     st.metric("Open exception cases", len(open_items))
-    st.dataframe(findings, width="stretch")
+    st.dataframe(
+        findings,
+        column_order=["worker_id", "rule", "source", "observed", "expected", "status"],
+        hide_index=True,
+        width="stretch",
+    )
     if findings:
         selected = st.selectbox(
             "Investigate",
@@ -52,7 +57,19 @@ with tabs[0]:
             format_func=lambda f: f"{f['worker_id']} — {f['rule']} — {f['status']}",
         )
         st.write(selected["explanation"])
-        st.json(call("GET", f"/runs/{run_id}/records/{selected['worker_id']}").json())
+        evidence = call("GET", f"/runs/{run_id}/records/{selected['worker_id']}").json()
+        st.caption(f"Source comparison as of {evidence['as_of']}")
+        evidence_rows = [
+            {"source": source, **record}
+            for source, records in evidence["sources"].items()
+            for record in records
+        ]
+        st.dataframe(
+            evidence_rows,
+            column_order=["source", "worker_id", "status", "cost_centre", "manager_id", "fte"],
+            hide_index=True,
+            width="stretch",
+        )
         if (
             role == "analyst"
             and selected["field"] == "cost_centre"
