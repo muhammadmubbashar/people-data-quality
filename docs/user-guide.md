@@ -10,8 +10,8 @@ Record the evidence and request C100. A missing value is not permission to guess
 ## Reviewer
 
 Review the proposed value, previous value and reason. In this local demo, approve only when the
-synthetic evidence supports it. Rejection/escalation is not implemented yet: do not approve a
-request that you cannot support. Leave it pending and record the limitation in your walkthrough.
+synthetic evidence supports it. Reject an unsupported request with a reason. Analysts can cancel a pending or approved request,
+or escalate a case with evidence and a named team. Do not approve a guess.
 
 ## Operator
 
@@ -32,3 +32,17 @@ Confirm the payroll process and period before classifying it.
 
 **Why did a duplicate fail?** A lookup could choose an arbitrary row or multiply joined records.
 Resolve the duplicate with the source owner before cross-system comparison.
+
+
+## Expanded workspaces
+
+Use the sidebar Workspace selector. Bulk corrections supports preview, submission, review and
+all-or-nothing application. Reports and trends provides source-date context and downloadable
+synthetic source CSVs. Release testing exercises a deliberately faulty fictional release.
+Guides and coaching retains guide versions and distinguishes self-practice from actual peer feedback.
+Requirements workshop records a problem, acceptance criteria and review decision.
+Practice setup creates independent exercise datasets without deleting previous runs.
+
+Follow [the practice lessons](practice-lessons.md) in order. A new user should first explain one
+employee mismatch confidently, then practise bulk changes and testing. An unresolved duplicate
+or missing employee requires source-owner investigation, not a fabricated field value.

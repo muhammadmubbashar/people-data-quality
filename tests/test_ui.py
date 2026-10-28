@@ -1,12 +1,62 @@
 """Exercise the real UI against the real API contract without network or credentials."""
 
+import json
 from pathlib import Path
 from urllib.parse import urlsplit
 
+import pytest
 from fastapi.testclient import TestClient
 from streamlit.testing.v1 import AppTest
 
 from people_quality.api import Settings, create_app
+
+
+@pytest.mark.parametrize(
+    "workspace",
+    [
+        "Bulk corrections",
+        "Reports and trends",
+        "Release testing",
+        "Guides and coaching",
+        "Requirements workshop",
+        "Practice setup",
+        "Workday sample data",
+    ],
+)
+def test_expanded_workspaces_render(monkeypatch, tmp_path, workspace):
+    keys = {role: role + "-ui-test-" + "x" * 32 for role in ("analyst", "reviewer", "operator")}
+    for role, value in keys.items():
+        monkeypatch.setenv(f"{role.upper()}_KEY", value)
+    if workspace == "Workday sample data":
+        capture = {
+            "source": "personal_workday_development_tenant",
+            "mode": "read_only_api_probe",
+            "sample_only": True,
+            "audit_imported": False,
+            "received_rows": 1,
+            "checked_at": "2026-10-29T01:00:00+00:00",
+            "response": {"data": [{"id": "test-worker", "descriptor": "Sample Worker"}]},
+        }
+        (tmp_path / "workday-probe.json").write_text(json.dumps(capture), encoding="utf-8")
+    with TestClient(create_app(Settings(str(tmp_path / "ui.db"), keys))) as api:
+        headers = {"X-API-Key": keys["analyst"]}
+        api.post("/lab/practice-history", headers=headers).raise_for_status()
+        api.post("/lab/test-runs", headers=headers, json={"release": "candidate_bug"})
+
+        def transport(method, url, **kwargs):
+            kwargs.pop("timeout", None)
+            response = api.request(method, urlsplit(url).path, **kwargs)
+            response.ok = response.is_success
+            return response
+
+        monkeypatch.setattr("requests.request", transport)
+        app = AppTest.from_file(str(Path(__file__).parents[1] / "ui/app.py"), default_timeout=60)
+        app.run()
+        app.sidebar.selectbox[1].set_value(workspace).run()
+        assert not app.exception
+        assert app.header
+        if workspace == "Workday sample data":
+            assert "1 sample workers" in app.success[0].value
 
 
 def test_ui_request_review_apply_workflow(monkeypatch, tmp_path):

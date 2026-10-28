@@ -6,8 +6,9 @@ import json
 import os
 import secrets
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import date
+from pathlib import Path
 from typing import Annotated
 
 from dotenv import load_dotenv
@@ -16,8 +17,13 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from people_quality.demo import sample_snapshots
-from people_quality.domain import COST_CENTRES, Finding, Worker, audit
+from people_quality.domain import COST_CENTRES, Worker, audit
+from people_quality.lab_api import register_lab
+from people_quality.operations import create_run as create_practice_run
+from people_quality.operations import run_context
 from people_quality.store import Store, encoded
+from people_quality.workday import ConnectionError as WorkdayConnectionError
+from people_quality.workday import capture_summary
 
 
 @dataclass(frozen=True)
@@ -44,6 +50,7 @@ class ImportRequest(BaseModel):
     workday: list[Worker] = Field(min_length=1, max_length=5000)
     payroll: list[Worker] = Field(min_length=1, max_length=5000)
     core: list[Worker] = Field(min_length=1, max_length=5000)
+    source_dates: dict[str, date] | None = None
 
 
 class ChangeRequest(BaseModel):
@@ -65,7 +72,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     if len(set(settings.keys.values())) != 3 or any(len(k) < 24 for k in settings.keys.values()):
         raise RuntimeError("Run scripts/setup.ps1: distinct random demo keys are required")
     store = Store(settings.db_path)
-    app = FastAPI(title="People Data Quality — independent synthetic demo", version="0.1.0")
+    app = FastAPI(title="People Data Quality — independent synthetic demo", version="0.2.1")
 
     def actor(x_api_key: Annotated[str | None, Header()] = None) -> str:
         for role, key in settings.keys.items():
@@ -85,30 +92,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(404, "Run not found")
         return row
 
-    def insert_finding(db, run_id, item: Finding):
-        finding_id = str(uuid.uuid4())
-        db.execute(
-            "INSERT INTO findings(id,run_id,payload) VALUES(?,?,?)",
-            (finding_id, run_id, encoded(asdict(item))),
-        )
-
-    def new_run(snapshots, as_of):
-        findings = audit(snapshots, as_of)
-        run_id = str(uuid.uuid4())
-        with store.transaction() as db:
-            db.execute(
-                "INSERT INTO runs(id,as_of,snapshots) VALUES(?,?,?)",
-                (run_id, as_of.isoformat(), encoded(snapshots)),
-            )
-            for item in findings:
-                insert_finding(db, run_id, item)
-        return {"run_id": run_id, "findings": len(findings), "synthetic_demo": True}
+    def new_run(snapshots, as_of, source_dates=None):
+        return create_practice_run(store, snapshots, as_of, source_dates)
 
     def validate_change(db, request):
         row = db.execute("SELECT * FROM findings WHERE id=?", (request.finding_id,)).fetchone()
         if row is None:
             raise HTTPException(404, "Finding not found")
         payload = json.loads(row["payload"])
+        _, context = run_context(db, row["run_id"])
+        run = get_run(db, row["run_id"])
+        if any(d != run["as_of"] for d in context["source_dates"].values()):
+            raise HTTPException(422, "Obtain comparable source dates before corrections")
         if row["status"] != "open":
             raise HTTPException(409, "Finding is already resolved")
         if payload["field"] != "cost_centre":
@@ -123,7 +118,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/health")
     def health():
-        return {"status": "ok", "mode": "synthetic-demo", "version": "0.1.0"}
+        return {"status": "ok", "mode": "synthetic-demo", "version": "0.2.1"}
 
     @app.post("/runs/demo")
     def demo_run(role: Actor):
@@ -137,7 +132,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             source: [worker.model_dump() for worker in getattr(request, source)]
             for source in ("workday", "payroll", "core")
         }
-        return new_run(snapshots, request.as_of)
+        dates = (
+            {k: v.isoformat() for k, v in request.source_dates.items()}
+            if request.source_dates is not None
+            else None
+        )
+        return new_run(snapshots, request.as_of, dates)
 
     @app.get("/runs")
     def runs(role: Actor):
@@ -255,6 +255,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "SELECT * FROM findings WHERE id=?", (change["finding_id"],)
             ).fetchone()
             payload = json.loads(finding["payload"])
+            if finding["status"] != "open":
+                raise HTTPException(409, "Finding is closed; investigate before applying")
             run = get_run(db, finding["run_id"])
             snapshots = json.loads(run["snapshots"])
             targets = [
@@ -317,4 +319,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             headers={"Content-Disposition": 'attachment; filename="synthetic-audit.csv"'},
         )
 
+    @app.get("/workday/capture", tags=["Personal Workday lab"])
+    def workday_capture(role: Actor):
+        try:
+            return capture_summary(Path(settings.db_path).parent / "workday-probe.json")
+        except (WorkdayConnectionError, OSError):
+            raise HTTPException(
+                422, "Workday capture unavailable or invalid; inspect local evidence"
+            ) from None
+
+    register_lab(app, store, actor)
     return app
