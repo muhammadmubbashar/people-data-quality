@@ -6,9 +6,10 @@ An independent HR systems portfolio project: investigate synthetic employee-data
 request a correction, obtain separate review, apply it to a simulated snapshot and revalidate.
 Built to practise the work described in a People Systems Data Analyst vacancy.
 
-**No affiliation with Flight Centre or Workday. No employer data. No Workday integration has
-been verified yet.** The preferred next step is an authorised Workday personal development tenant.
-The local app demonstrates the workflow while that access is being established.
+**No affiliation with Flight Centre or Workday. No employer data.** A read-only OAuth/PKCE
+connection to a personal Workday development tenant was verified on 29 October 2026 by fetching
+five sample workers. The Workday workspace displays that saved capture; it is not a continuous
+live session. The fictional audit data remains separate until complete field mappings are verified.
 
 ## Start here
 
@@ -17,12 +18,13 @@ The local app demonstrates the workflow while that access is being established.
 - [Public website review](docs/public-site-review.md)
 - [Your first lesson and demo](docs/step-by-step.md)
 - [Architecture and diagram](docs/architecture.md)
+- [Verified Workday read and refresh instructions](docs/workday-connection.md)
 - [Real Workday access and integration plan](docs/workday-lab.md)
 - [Requirements and delivery milestones](docs/roadmap.md)
 - [Production and scalability plan](docs/production.md)
 - [User guide](docs/user-guide.md)
 
-## What runs today — v0.2 analyst practice lab
+## What runs today — v0.2.1 analyst practice lab
 
 - FastAPI service with authenticated demo-role checks and documented REST endpoints.
 - Streamlit interface for audit review, source comparison, correction requests, approvals and CSV reports.
@@ -35,6 +37,7 @@ The local app demonstrates the workflow while that access is being established.
 - Dated source captures, filtered reports, comparable trend exercises and Excel source downloads.
 - Simulated release testing, defects, passing retests and reviewer verification.
 - Versioned guides, coaching practice and requirements decisions with evidence labels.
+- Authenticated personal Workday sample preview, bounded GET, PKCE/state checks and no stored tokens.
 - Automated domain/API tests, dependency hash locks, lint and format checks, container configuration and CI.
 
 ## Windows setup

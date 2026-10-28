@@ -15,13 +15,15 @@ Work in small PRs. Completed below means local implementation with tests, not re
 
 ## Phase 2 — Real platform and analyst tools
 
-- [ ] Obtain personal Workday tenant; verify actual products and permissions.
+- [x] Obtain personal Workday tenant; inspect HR Operations and native API setup.
 - [ ] Capture authorised synthetic worker report and actual data dictionary.
 - [ ] CSV adapter: mandatory mappings, key uniqueness, encoding, row/size limits and provenance.
 - [ ] Contract tests against an actual permitted sample export, with no credentials in fixtures.
 - [ ] Excel/Power Query exercise and user teaching walkthrough.
 - [ ] Native report configuration evidence if tenant permissions allow it.
-- [ ] Implement an authenticated read-only API adapter only after discovering supported endpoints.
+- [x] Verify OAuth/PKCE and bounded five-worker GET using actual tenant endpoints.
+- [x] Authenticated/minimised preview of saved sample capture, separate from fictional audit data.
+- [ ] Complete audit field mapping, native reports and recurring API synchronisation.
 
 ## Phase 3 — Complete the advertised operational workflow
 

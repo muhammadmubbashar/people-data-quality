@@ -18,11 +18,15 @@ flowchart LR
     API --> CSV[Filtered reports and three-source CSV download]
     API --> REGRESSION[Executable fictional release scenarios]
     RULES --> API
-    API -. planned authorised export or API .-> WD[Personal Workday development tenant]
+    WD[Personal Workday development tenant] -->|OAuth PKCE and bounded GET| PROBE[One-shot local HTTPS probe]
+    PROBE --> CAPTURE[Ignored local sample capture]
+    CAPTURE -->|Authenticated preview endpoint| API
+    CAPTURE -. complete field mapping still planned .-> RULES
 ```
 
-Solid edges are implemented. The dashed integration is planned, pending access and capability checks.
-This is an integration to a personal development tenant, never Flight Centre's production tenant.
+Solid edges are implemented. A five-worker personal-tenant API read was verified locally.
+The dashed step is future complete field mapping into the audit model. Tokens are not persisted,
+and the UI shows a saved capture, not a live session. No Flight Centre systems are connected.
 
 ## Data flow
 

@@ -8,6 +8,7 @@ import secrets
 import uuid
 from dataclasses import dataclass
 from datetime import date
+from pathlib import Path
 from typing import Annotated
 
 from dotenv import load_dotenv
@@ -21,6 +22,8 @@ from people_quality.lab_api import register_lab
 from people_quality.operations import create_run as create_practice_run
 from people_quality.operations import run_context
 from people_quality.store import Store, encoded
+from people_quality.workday import ConnectionError as WorkdayConnectionError
+from people_quality.workday import capture_summary
 
 
 @dataclass(frozen=True)
@@ -69,7 +72,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     if len(set(settings.keys.values())) != 3 or any(len(k) < 24 for k in settings.keys.values()):
         raise RuntimeError("Run scripts/setup.ps1: distinct random demo keys are required")
     store = Store(settings.db_path)
-    app = FastAPI(title="People Data Quality — independent synthetic demo", version="0.2.0")
+    app = FastAPI(title="People Data Quality — independent synthetic demo", version="0.2.1")
 
     def actor(x_api_key: Annotated[str | None, Header()] = None) -> str:
         for role, key in settings.keys.items():
@@ -115,7 +118,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/health")
     def health():
-        return {"status": "ok", "mode": "synthetic-demo", "version": "0.2.0"}
+        return {"status": "ok", "mode": "synthetic-demo", "version": "0.2.1"}
 
     @app.post("/runs/demo")
     def demo_run(role: Actor):
@@ -315,6 +318,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             media_type="text/csv",
             headers={"Content-Disposition": 'attachment; filename="synthetic-audit.csv"'},
         )
+
+    @app.get("/workday/capture", tags=["Personal Workday lab"])
+    def workday_capture(role: Actor):
+        try:
+            return capture_summary(Path(settings.db_path).parent / "workday-probe.json")
+        except (WorkdayConnectionError, OSError):
+            raise HTTPException(
+                422, "Workday capture unavailable or invalid; inspect local evidence"
+            ) from None
 
     register_lab(app, store, actor)
     return app

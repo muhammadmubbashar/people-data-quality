@@ -436,5 +436,46 @@ def render_workspace(name, call, role):
         "Guides and coaching": knowledge,
         "Requirements workshop": requirements,
         "Practice setup": setup,
+        "Workday sample data": workday_preview,
     }
     views[name](call, role)
+
+
+def workday_preview(call, role):
+    st.header("Your personal Workday sample data")
+    st.write("This page shows the last saved read-only API response from your practice tenant.")
+    capture = call("GET", "/workday/capture").json()
+    if capture["status"] == "not_captured":
+        st.info("No verified Workday API capture is available on this installation yet.")
+        return
+    st.success(f"Successful API capture: {capture['received_rows']} sample workers.")
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    checked = datetime.fromisoformat(capture["checked_at"]).astimezone(
+        ZoneInfo("Australia/Brisbane")
+    )
+    st.caption(f"Captured {checked:%d %b %Y, %H:%M} Brisbane time. Not a live session.")
+    st.dataframe(capture["workers"], hide_index=True, width="stretch")
+    st.warning(
+        "A supervisory organisation describes a reporting group; it is not a cost centre. "
+        "This response does not include the fields needed for our complete audit."
+    )
+    st.write("Not provided by this endpoint:", ", ".join(capture["not_provided_by_this_endpoint"]))
+    st.write(
+        "We have not imported these workers into the fictional payroll/Core comparison. "
+        "First agree actual field mappings, effective dates and data ownership. No values "
+        "have been guessed and no Workday employee records have been changed."
+    )
+    st.write(
+        "Interview explanation: I authenticated to my personal Workday development tenant "
+        "using OAuth with PKCE and retrieved a small sample of worker records. I inspected "
+        "the response contract before attempting reconciliation."
+    )
+    with st.expander("Connection and evidence boundaries"):
+        st.write(capture["note"])
+        st.code(capture["capture_sha256"], language=None)
+        st.write(
+            "To refresh, run scripts/connect_workday.py and complete its OAuth flow. "
+            "The one-shot process exits and discards credentials after the read."
+        )

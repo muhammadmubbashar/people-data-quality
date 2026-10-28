@@ -11,9 +11,7 @@ from ui.lab_views import case_workspace, render_workspace
 load_dotenv()
 st.set_page_config(page_title="People Data Quality", layout="wide")
 st.title("People Data Quality and Payroll Readiness")
-st.caption(
-    "Independent portfolio demo • synthetic records • no Flight Centre or Workday integration"
-)
+st.caption("Independent portfolio • synthetic audit data • personal Workday API sample preview")
 role = st.sidebar.selectbox("Simulated identity", ["analyst", "reviewer", "operator"])
 st.sidebar.info("Local role-key simulation. SSO and real individual identities are future work.")
 base_url = os.getenv("API_URL", "http://127.0.0.1:8000")
@@ -42,6 +40,7 @@ workspace = st.sidebar.selectbox(
         "Guides and coaching",
         "Requirements workshop",
         "Practice setup",
+        "Workday sample data",
     ],
 )
 if workspace != "My work":

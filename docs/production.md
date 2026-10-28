@@ -2,7 +2,7 @@
 
 ## Current boundary
 
-v0.1 is a local synthetic-data learning demo. Production mode deliberately fails closed. No cloud
+v0.2.1 is a local learning demo with fictional audit datasets and an optional personal-tenant API capture. Production mode deliberately fails closed. No cloud
 resources, employer integrations or public deployment are provisioned. Container configuration
 is not a claim of production readiness. Actual Docker verification is recorded by CI results.
 

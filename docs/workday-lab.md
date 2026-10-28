@@ -2,11 +2,14 @@
 
 ## Preferred: personal Workday development tenant
 
-Current setup status (29 October 2026): the personal-account beta request was submitted and
-the console confirmed **Access Request Pending**. No tenant has been provisioned or connected.
-Workday will email the account owner after reviewing the request. The request described student
-status and an independent synthetic-data HR learning project. Personal account details and
-confirmation screenshots remain local and are not committed.
+Current setup status (29 October 2026): a personal development tenant has been provisioned and
+the account owner completed first login. Native HR Operations screens, sample enterprise records
+and API endpoint information are accessible. A dedicated Staffing OAuth/PKCE client was created
+and the local HTTPS certificate trusted after explicit approval. OAuth/PKCE authentication and
+a bounded read of five sample workers succeeded. A saved sample preview is available in the UI.
+The access token was discarded; a continuous sync and full audit mapping are not implemented.
+See [connection setup and boundaries](workday-connection.md). Personal account details, tenant
+identifiers, certificates and configuration remain local and are not committed.
 
 Workday's October 2026 announcement allows individuals to join the Developer Program with a
 personal email and request a personal development tenant through its open-access beta.
